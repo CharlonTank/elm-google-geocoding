@@ -9,25 +9,6 @@ apiKey : String
 apiKey =
     "ABCD"
 
-
-all : Test
-all =
-    describe "A Test Suite"
-        [ testInitializeWithAddressOnly
-        , testInitializeWithComponentsOnly
-        , testWithAddress
-        , testWithComponents
-        , testWithRegion
-        , testWithLanguage
-        , testWithBounds
-        , testReverseForLatLng
-        , testReverseForPlaceId
-        , testReverseWithLanguage
-        , testReverseWithResultTypes
-        , testReverseWithLocationTypes
-        ]
-
-
 testInitializeWithAddressOnly : Test
 testInitializeWithAddressOnly =
     let

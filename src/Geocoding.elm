@@ -67,8 +67,7 @@ import Http
 import String
 import Json.Decode.Pipeline
     exposing
-        ( decode
-        , required
+        ( required
         , optional
         )
 import Json.Decode
@@ -84,6 +83,8 @@ import Json.Decode
         , nullable
         )
 
+--encodeURI behaviour:
+import Url exposing (percentEncode)
 
 -- Types
 
@@ -297,7 +298,7 @@ mapStatus str =
 
 responseDecoder : Decoder Response
 responseDecoder =
-    decode Response
+    succeed Response
         |> required "status" statusDecoder
         |> required "results" resultListDecoder
 
@@ -309,7 +310,7 @@ resultListDecoder =
 
 resultDecoder : Decoder GeocodingResult
 resultDecoder =
-    decode GeocodingResult
+    succeed GeocodingResult
         |> required "address_components" addressComponentListDecoder
         |> required "formatted_address" string
         |> required "geometry" geometryDecoder
@@ -324,7 +325,7 @@ addressComponentListDecoder =
 
 addressComponentDecoder : Decoder AddressComponent
 addressComponentDecoder =
-    decode AddressComponent
+    succeed AddressComponent
         |> optional "long_name" (nullable string) Nothing
         |> optional "short_name" (nullable string) Nothing
         |> required "types" typeListDecoder
@@ -332,14 +333,14 @@ addressComponentDecoder =
 
 locationDecoder : Decoder Location
 locationDecoder =
-    decode Location
+    succeed Location
         |> required "lat" float
         |> required "lng" float
 
 
 viewportDecoder : Decoder Viewport
 viewportDecoder =
-    decode Viewport
+    succeed Viewport
         |> required "northeast" locationDecoder
         |> required "southwest" locationDecoder
 
@@ -351,7 +352,7 @@ locationTypeDecoder =
 
 geometryDecoder : Decoder Geometry
 geometryDecoder =
-    decode Geometry
+    succeed Geometry
         |> required "location" locationDecoder
         |> required "location_type" locationTypeDecoder
         |> required "viewport" viewportDecoder
@@ -425,7 +426,7 @@ componentToString c =
 
 locationToString : Location -> String
 locationToString l =
-    String.join "," [ toString l.latitude, toString l.longitude ]
+    String.join "," [ String.fromFloat l.latitude, String.fromFloat l.longitude ]
 
 
 viewportToString : Viewport -> String
@@ -456,7 +457,7 @@ reverseRequestInfoParameter : ReverseRequestInfo -> ( String, String )
 reverseRequestInfoParameter info =
     case info of
         LatLng ( lat, lng ) ->
-            ( "latlng", [ lat, lng ] |> List.map toString |> String.join "," )
+            ( "latlng", [ lat, lng ] |> List.map String.fromFloat |> String.join "," )
 
         PlaceId id ->
             ( "place_id", id )
@@ -472,9 +473,9 @@ toParameters req =
     List.concat
         [ [ ( "key", req.apiKey ) ]
         , requestInfoParameter req.requestInfo
-        , Maybe.map (singleton << (,) "bounds" << viewportToString) req.bounds |> Maybe.withDefault []
-        , Maybe.map (singleton << (,) "language") req.language |> Maybe.withDefault []
-        , Maybe.map (singleton << (,) "region") req.region |> Maybe.withDefault []
+        , Maybe.map (singleton << Tuple.pair "bounds" << viewportToString) req.bounds |> Maybe.withDefault []
+        , Maybe.map (singleton << Tuple.pair "language") req.language |> Maybe.withDefault []
+        , Maybe.map (singleton << Tuple.pair "region") req.region |> Maybe.withDefault []
         ]
 
 
@@ -483,9 +484,9 @@ toReverseRequestParameters req =
     List.concat
         [ [ ( "key", req.apiKey ) ]
         , [ reverseRequestInfoParameter req.requestInfo ]
-        , Maybe.map (singleton << (,) "language") req.language |> Maybe.withDefault []
-        , Maybe.map (singleton << (,) "result_type" << String.join "|" << List.map componentTypeToString) req.resultType |> Maybe.withDefault []
-        , Maybe.map (singleton << (,) "location_type" << String.join "|" << List.map locationTypeToString) req.locationType |> Maybe.withDefault []
+        , Maybe.map (singleton << Tuple.pair "language") req.language |> Maybe.withDefault []
+        , Maybe.map (singleton << Tuple.pair "result_type" << String.join "|" << List.map componentTypeToString) req.resultType |> Maybe.withDefault []
+        , Maybe.map (singleton << Tuple.pair "location_type" << String.join "|" << List.map locationTypeToString) req.locationType |> Maybe.withDefault []
         ]
 
 
@@ -800,7 +801,7 @@ queryPair ( key, value ) =
 
 queryEscape : String -> String
 queryEscape =
-    Http.encodeUri >> replace "%20" "+"
+    percentEncode >> replace "%20" "+"
 
 
 replace : String -> String -> String -> String
