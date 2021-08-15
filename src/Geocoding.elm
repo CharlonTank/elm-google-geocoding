@@ -1,96 +1,89 @@
-module Geocoding
-    exposing
-        ( send
-        , requestForAddress
-        , requestForComponents
-        , withLanguage
-        , withBounds
-        , withRegion
-        , withComponent
-        , withAddress
-        , reverseRequestForLatLng
-        , reverseRequestForPlaceId
-        , reverseWithLanguage
-        , withResultTypes
-        , withLocationTypes
-        , sendReverseRequest
-        , GeocodingResult
-        , Status(..)
-        , Viewport
-        , ApiKey
-        , Component(..)
-        , LocationType(..)
-        , ComponentType(..)
-        , Response
-        , requestUrl
-        , reverseRequestUrl
-        )
+module Geocoding exposing
+    ( GeocodingResult, Status(..), Viewport, ApiKey, Component(..), LocationType(..), ComponentType(..), Response
+    , requestForAddress, requestForComponents, withAddress, withComponent, withLanguage, withRegion, withBounds
+    , reverseRequestForLatLng, reverseRequestForPlaceId, reverseWithLanguage, withResultTypes, withLocationTypes
+    , send, sendReverseRequest
+    , requestUrl, reverseRequestUrl
+    )
 
 {-| This library is an interface to Google's geocoding service
 
-https://developers.google.com/maps/documentation/geocoding/intro
+<https://developers.google.com/maps/documentation/geocoding/intro>
 
 It provides a pipline friendly, builder-like API, and ADTs that map as closely as possible to the Google API
 
 You can start building a request one of two ways:
 
     Geocoding.requestForAddress apiKey "77 Battery St."
+
     Geocoding.requestForComponents
-      [
-        ("Spain", Geocoding.CountryComponent)
-      ]
+        [ ( "Spain", Geocoding.CountryComponent )
+        ]
 
 or for reverse geocoding:
-    Geocoding.reverseRequestForLatLng apiKey ( 37.8489277, -122.4031502 )
-    Geocoding.reverseRequestForPlaceId apiKey "ChIJrTLr-GyuEmsRBfy61i59si0"
+Geocoding.reverseRequestForLatLng apiKey ( 37.8489277, -122.4031502 )
+Geocoding.reverseRequestForPlaceId apiKey "ChIJrTLr-GyuEmsRBfy61i59si0"
 
 Once you've built your request, calling send will return a `Http.Request`, which you perform to generate your own msg types
 
+
 # Types
+
 @docs GeocodingResult, Status, Viewport, ApiKey, Component, LocationType, ComponentType, Response
 
+
 # Building a request
+
 @docs requestForAddress, requestForComponents, withAddress, withComponent, withLanguage, withRegion, withBounds
 
+
 # Building a reverse geocoding request
+
 @docs reverseRequestForLatLng, reverseRequestForPlaceId, reverseWithLanguage, withResultTypes, withLocationTypes
 
+
 # Sending a request
+
 @docs send, sendReverseRequest
 
+
 # Inspecting a request
+
 @docs requestUrl, reverseRequestUrl
+
 -}
+
+--encodeURI behaviour:
 
 import Dict exposing (Dict)
 import Http
-import String
-import Json.Decode.Pipeline
-    exposing
-        ( required
-        , optional
-        )
 import Json.Decode
     exposing
-        ( list
+        ( Decoder
+        , fail
+        , field
+        , float
         , int
+        , list
+        , nullable
         , string
         , succeed
-        , fail
-        , float
-        , Decoder
-        , field
-        , nullable
         )
-
---encodeURI behaviour:
+import Json.Decode.Pipeline
+    exposing
+        ( optional
+        , required
+        )
+import String
 import Url exposing (percentEncode)
+
+
 
 -- Types
 
 
 {-| response status and a list of results (list will be empty if status is other than OK)
-https://developers.google.com/maps/documentation/geocoding/intro#GeocodingResponses
+<https://developers.google.com/maps/documentation/geocoding/intro#GeocodingResponses>
 -}
 type alias Response =
     { status : Status
@@ -99,7 +92,7 @@ type alias Response =
 
 
 {-| mapping of Google API response statuses
-https://developers.google.com/maps/documentation/geocoding/intro#StatusCodes
+<https://developers.google.com/maps/documentation/geocoding/intro#StatusCodes>
 -}
 type Status
     = GeocodingOk
@@ -111,7 +104,7 @@ type Status
 
 
 {-| an individual result
-https://developers.google.com/maps/documentation/geocoding/intro#Results
+<https://developers.google.com/maps/documentation/geocoding/intro#Results>
 -}
 type alias GeocodingResult =
     { addressComponents : List AddressComponent
@@ -123,7 +116,7 @@ type alias GeocodingResult =
 
 
 {-| a component of an address
-   https://developers.google.com/maps/documentation/geocoding/intro#Results
+<https://developers.google.com/maps/documentation/geocoding/intro#Results>
 -}
 type alias AddressComponent =
     { longName : Maybe String
@@ -133,7 +126,7 @@ type alias AddressComponent =
 
 
 {-| the latitude and longitude of the location, location type and recommended viewport
-   https://developers.google.com/maps/documentation/geocoding/intro#Results
+<https://developers.google.com/maps/documentation/geocoding/intro#Results>
 -}
 type alias Geometry =
     { location : Location
@@ -143,7 +136,7 @@ type alias Geometry =
 
 
 {-| address component types
-   https://developers.google.com/maps/documentation/geocoding/intro#Types
+<https://developers.google.com/maps/documentation/geocoding/intro#Types>
 -}
 type ComponentType
     = StreetAddress
@@ -193,7 +186,7 @@ type alias Location =
 
 
 {-| a bounding box
-   https://developers.google.com/maps/documentation/geocoding/intro#Viewports
+<https://developers.google.com/maps/documentation/geocoding/intro#Viewports>
 -}
 type alias Viewport =
     { northeast : Location
@@ -202,7 +195,7 @@ type alias Viewport =
 
 
 {-| additional data about a location
-   https://developers.google.com/maps/documentation/geocoding/intro#Result
+<https://developers.google.com/maps/documentation/geocoding/intro#Result>
 -}
 type LocationType
     = Rooftop
@@ -246,7 +239,7 @@ type alias ReverseGeocodingRequest =
 
 
 {-| components for request filtering
-   https://developers.google.com/maps/documentation/geocoding/intro#ComponentFiltering
+<https://developers.google.com/maps/documentation/geocoding/intro#ComponentFiltering>
 -}
 type Component
     = RouteComponent
@@ -436,7 +429,7 @@ viewportToString v =
 
 componentsToString : Dict String Component -> String
 componentsToString components =
-    String.join ("|") <|
+    String.join "|" <|
         Dict.foldr (\k v acc -> acc ++ [ componentToString v ++ ":" ++ k ]) [] components
 
 
@@ -493,17 +486,22 @@ toReverseRequestParameters req =
 {-| transform a GeocodingRequest into a Cmd
 
     Geocoding.requestForAddress apiKey "77 Battery St"
-      |> Geocoding.send MyGeocoderResult
+        |> Geocoding.send MyGeocoderResult
+
 -}
 send : (Result Http.Error Response -> msg) -> GeocodingRequest -> Cmd msg
 send toMessage req =
-    Http.get (requestUrl req) responseDecoder
-        |> Http.send toMessage
+    Http.post
+        { url = requestUrl req
+        , body = Http.emptyBody
+        , expect = Http.expectJson toMessage responseDecoder
+        }
 
 
 {-| Build a request for an address
 
     Geocoding.requestForAddress apiKey "77 Battery St"
+
 -}
 requestForAddress : ApiKey -> String -> GeocodingRequest
 requestForAddress key address =
@@ -513,10 +511,10 @@ requestForAddress key address =
 {-| Build a request for a list of component filters
 
     Geocoding.requestForComponents apiKey
-      [
-        ("Spain", Geocoding.CountryComponent)
-      , ("Toledo", Geocoding.AdministrativeAreaComponent)
-      ]
+        [ ( "Spain", Geocoding.CountryComponent )
+        , ( "Toledo", Geocoding.AdministrativeAreaComponent )
+        ]
+
 -}
 requestForComponents : ApiKey -> List ( String, Component ) -> GeocodingRequest
 requestForComponents key components =
@@ -526,7 +524,8 @@ requestForComponents key components =
 {-| Specify the language for the request
 
     Geocoding.requestForAddress apiKey "77 Battery St"
-      |> Geocoding.withLanguage("FR")
+        |> Geocoding.withLanguage "FR"
+
 -}
 withLanguage : String -> GeocodingRequest -> GeocodingRequest
 withLanguage lang { requestInfo, bounds, language, region, apiKey } =
@@ -536,7 +535,8 @@ withLanguage lang { requestInfo, bounds, language, region, apiKey } =
 {-| Specify a viewport bias for the request
 
     Geocoding.requestForAddress apiKey "Belmont"
-      |> Geocoding.withBounds (41, -74) (42, -70)
+        |> Geocoding.withBounds ( 41, -74 ) ( 42, -70 )
+
 -}
 withBounds : ( Float, Float ) -> ( Float, Float ) -> GeocodingRequest -> GeocodingRequest
 withBounds ( swLat, swLng ) ( neLat, neLng ) { requestInfo, bounds, language, region, apiKey } =
@@ -544,13 +544,14 @@ withBounds ( swLat, swLng ) ( neLat, neLng ) { requestInfo, bounds, language, re
         viewport =
             Viewport (Location neLat neLng) (Location swLat swLng)
     in
-        GeocodingRequest requestInfo (Just viewport) language region apiKey
+    GeocodingRequest requestInfo (Just viewport) language region apiKey
 
 
 {-| specify region biasing for request
 
     Geocoding.requestForAddress apiKey "Toledo"
-      |> Geocoding.withRegion "ES"
+        |> Geocoding.withRegion "ES"
+
 -}
 withRegion : String -> GeocodingRequest -> GeocodingRequest
 withRegion reg { requestInfo, bounds, language, region, apiKey } =
@@ -560,7 +561,8 @@ withRegion reg { requestInfo, bounds, language, region, apiKey } =
 {-| add a component filter to a request (can be called more than once for a request)
 
     Geocoding.requestForAddress apiKey "Toledo"
-      |> Geocoding.withComponent ("Spain", Geocoding.CountryComponent)
+        |> Geocoding.withComponent ( "Spain", Geocoding.CountryComponent )
+
 -}
 withComponent : ( String, Component ) -> GeocodingRequest -> GeocodingRequest
 withComponent comp { requestInfo, bounds, language, region, apiKey } =
@@ -568,17 +570,17 @@ withComponent comp { requestInfo, bounds, language, region, apiKey } =
         info =
             requestInfo |> addComponent comp
     in
-        GeocodingRequest info bounds language region apiKey
+    GeocodingRequest info bounds language region apiKey
 
 
 {-| set the address to a request. If called more than once, the later call overwrites the earlier
 
     Geocoding.requestForComponents apiKey
-      [
-        ("Spain", Geocoding.CountryComponent)
-      , ("Toledo", Geocoding.AdministrativeAreaComponent)
-      ]
+        [ ( "Spain", Geocoding.CountryComponent )
+        , ( "Toledo", Geocoding.AdministrativeAreaComponent )
+        ]
         |> Geocoding.withAddress "Toledo"
+
 -}
 withAddress : String -> GeocodingRequest -> GeocodingRequest
 withAddress address { requestInfo, bounds, language, region, apiKey } =
@@ -586,38 +588,42 @@ withAddress address { requestInfo, bounds, language, region, apiKey } =
         info =
             requestInfo |> addAddress address
     in
-        GeocodingRequest info bounds language region apiKey
+    GeocodingRequest info bounds language region apiKey
 
 
 
 -- Reverse geocoding request builders
 
 
-{-|
-  transform a reverse geocoding request into a Cmd
+{-| transform a reverse geocoding request into a Cmd
 
-    Geocoding.requestForLatLng apiKey (37.8489277,-122.4031502)
-      |> Geocoding.sendReverseRequest MyReverseGeocoderResult
+    Geocoding.requestForLatLng apiKey ( 37.8489277, -122.4031502 )
+        |> Geocoding.sendReverseRequest MyReverseGeocoderResult
 
 -}
 sendReverseRequest : (Result Http.Error Response -> msg) -> ReverseGeocodingRequest -> Cmd msg
 sendReverseRequest toMessage req =
-    Http.get (reverseRequestUrl req) responseDecoder
-        |> Http.send toMessage
+    Http.post
+        { url = reverseRequestUrl req
+        , body = Http.emptyBody
+        , expect = Http.expectJson toMessage responseDecoder
+        }
 
 
 {-| Build a reverse geocoding request for an location
 
-    Geocoding.reverseRequestForLatLng apiKey (37.8489277,-122.4031502)
+    Geocoding.reverseRequestForLatLng apiKey ( 37.8489277, -122.4031502 )
+
 -}
 reverseRequestForLatLng : ApiKey -> ( Float, Float ) -> ReverseGeocodingRequest
 reverseRequestForLatLng key latLng =
     ReverseGeocodingRequest (LatLng latLng) Nothing Nothing Nothing key
 
 
-{-| Build a reverse geocoding request for Google place_id
+{-| Build a reverse geocoding request for Google place\_id
 
     Geocoding.reverseRequestForLatLng apiKey "ChIJrTLr-GyuEmsRBfy61i59si0"
+
 -}
 reverseRequestForPlaceId : ApiKey -> String -> ReverseGeocodingRequest
 reverseRequestForPlaceId key placeId =
@@ -627,7 +633,8 @@ reverseRequestForPlaceId key placeId =
 {-| Set the language for the request
 
     Geocoding.reverseRequestForLatLng apiKey "ChIJrTLr-GyuEmsRBfy61i59si0"
-      |> Geocoding.reverseWithLanguage("FR")
+        |> Geocoding.reverseWithLanguage "FR"
+
 -}
 reverseWithLanguage : String -> ReverseGeocodingRequest -> ReverseGeocodingRequest
 reverseWithLanguage lang { requestInfo, language, resultType, locationType, apiKey } =
@@ -636,8 +643,9 @@ reverseWithLanguage lang { requestInfo, language, resultType, locationType, apiK
 
 {-| Set the result type(s) for the request
 
-    Geocoding.reverseRequestForLatLng apiKey (37.8489277,-122.4031502)
-      |> Geocoding.withResultTypes [Country, PostalCode]
+    Geocoding.reverseRequestForLatLng apiKey ( 37.8489277, -122.4031502 )
+        |> Geocoding.withResultTypes [ Country, PostalCode ]
+
 -}
 withResultTypes : List ComponentType -> ReverseGeocodingRequest -> ReverseGeocodingRequest
 withResultTypes resultTypes { requestInfo, language, resultType, locationType, apiKey } =
@@ -646,8 +654,8 @@ withResultTypes resultTypes { requestInfo, language, resultType, locationType, a
 
 {-| Set the location type filters for the request
 
-    Geocoding.reverseRequestForLatLng apiKey (37.8489277,-122.4031502)
-      |> Geocoding.withLocationTypes [Approximate]
+    Geocoding.reverseRequestForLatLng apiKey ( 37.8489277, -122.4031502 )
+        |> Geocoding.withLocationTypes [ Approximate ]
 
 -}
 withLocationTypes : List LocationType -> ReverseGeocodingRequest -> ReverseGeocodingRequest
@@ -785,6 +793,7 @@ url : String -> List ( String, String ) -> String
 url base params =
     if List.isEmpty params then
         base
+
     else
         base ++ "?" ++ joinUrlEncoded params
 
