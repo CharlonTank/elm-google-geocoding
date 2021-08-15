@@ -1,6 +1,6 @@
 {
     "type": "package",
-    "name": "CharlonTank/elm-google-geocoding",
+    "name": "labzero/elm-google-geocoding",
     "summary": "Elm interface to the Google Geocoding API",
     "license": "BSD-3-Clause",
     "version": "6.0.0",
